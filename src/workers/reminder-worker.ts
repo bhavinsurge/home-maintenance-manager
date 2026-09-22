@@ -1,8 +1,6 @@
 import { addDays, format } from "date-fns";
-import { NotificationType, PrismaClient } from "@prisma/client";
+import { NotificationType, prisma } from "@homestead/database";
 import { logger } from "../lib/logger";
-
-const prisma = new PrismaClient();
 
 function dayKey(date = new Date()) {
   return format(date, "yyyy-MM-dd");

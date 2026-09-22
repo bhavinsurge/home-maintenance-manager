@@ -1,34 +1,35 @@
 {
-  "name": "01-home-maintenance-manager",
+  "name": "homestead-keep",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev -p 3005",
-    "build": "prisma generate && next build",
-    "start": "next start -p 3005",
-    "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
-    "db:seed": "tsx prisma/seed.ts",
-    "db:reset": "prisma migrate reset --force",
-    "db:studio": "prisma studio",
-    "worker": "tsx src/workers/reminder-worker.ts",
-    "test": "vitest run",
-    "test:unit": "vitest run tests/unit",
-    "test:integration": "vitest run tests/integration",
-    "test:e2e": "playwright test",
-    "test:watch": "vitest",
-    "postinstall": "prisma generate"
-  },
-  "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "yarn workspace @homestead/database generate",
+    "db:migrate": "yarn workspace @homestead/database migrate:dev",
+    "db:migrate:deploy": "yarn workspace @homestead/database migrate",
+    "db:seed": "yarn workspace @homestead/database seed",
+    "db:studio": "yarn workspace @homestead/database studio",
+    "legacy:dev": "next dev -p 3005",
+    "legacy:build": "yarn db:generate && next build",
+    "legacy:start": "next start -p 3005",
+    "legacy:worker": "tsx src/workers/reminder-worker.ts",
+    "legacy:lint": "eslint src tests --max-warnings 0",
+    "legacy:typecheck": "tsc --noEmit",
+    "legacy:test": "vitest run",
+    "legacy:test:unit": "vitest run tests/unit",
+    "legacy:test:integration": "vitest run tests/integration",
+    "legacy:test:e2e": "playwright test"
   },
   "dependencies": {
-    "@prisma/client": "^6.19.3",
+    "@homestead/database": "0.1.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^4.4.0",
@@ -60,10 +61,14 @@
     "eslint-config-next": "16.3.5",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.8",
-    "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
+    "turbo": "^2.5.4",
     "typescript": "^5",
     "vitest": "^4.1.11"
-  }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "yarn@1.22.22"
 }

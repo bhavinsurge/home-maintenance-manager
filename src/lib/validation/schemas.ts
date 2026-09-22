@@ -4,7 +4,7 @@ import {
   AssetStatus,
   HouseholdRole,
   ScheduleFrequency,
-} from "@prisma/client";
+} from "@homestead/database";
 
 export const registerSchema = z.object({
   email: z.string().email().max(255),

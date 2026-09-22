@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
-import { HouseholdRole } from "@prisma/client";
+import { HouseholdRole } from "@homestead/database";
 import { prisma } from "@/lib/db/prisma";
 import { unauthorized, forbidden } from "@/lib/errors/app-error";
 import { verifyAccessToken } from "@/lib/auth/tokens";

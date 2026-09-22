@@ -1,4 +1,4 @@
-import { HouseholdRole } from "@prisma/client";
+import { HouseholdRole } from "@homestead/database";
 
 const ROLE_RANK: Record<HouseholdRole, number> = {
   MEMBER: 1,

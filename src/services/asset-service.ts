@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { AssetStatus, HouseholdRole, Prisma } from "@prisma/client";
+import { AssetStatus, HouseholdRole, Prisma } from "@homestead/database";
 import { prisma } from "@/lib/db/prisma";
 import { writeAudit } from "@/lib/audit";
 import { requireHouseholdMember, requireUser } from "@/lib/auth/session";
@@ -12,7 +12,7 @@ import {
   assetUpdateSchema,
   paginationSchema,
 } from "@/lib/validation/schemas";
-import { AssetCategory } from "@prisma/client";
+import { AssetCategory } from "@homestead/database";
 import { z } from "zod";
 
 async function loadAssetForUser(userId: string, assetId: string, minimum: HouseholdRole = HouseholdRole.MEMBER) {

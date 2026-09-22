@@ -1,12 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { PrismaClient, HouseholdRole, ScheduleFrequency, AssetCategory } from "@prisma/client";
+import { PrismaClient, HouseholdRole, ScheduleFrequency, AssetCategory } from "@homestead/database";
 import { hashPassword } from "../../src/lib/auth/tokens";
 import { computeNextDueDate } from "../../src/lib/schedules/recurrence";
 
 const databaseUrl =
   process.env.DATABASE_URL_TEST ??
   process.env.DATABASE_URL ??
-  "postgresql://hmm:hmm_dev_password@localhost:5433/home_maintenance_test?schema=public";
+  "postgresql://hmm:hmm_dev_password@localhost:5434/home_maintenance_test?schema=public";
 
 process.env.DATABASE_URL = databaseUrl;
 process.env.JWT_ACCESS_SECRET = process.env.JWT_ACCESS_SECRET ?? "test-access-secret";

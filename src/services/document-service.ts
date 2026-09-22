@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { HouseholdRole } from "@prisma/client";
+import { HouseholdRole } from "@homestead/database";
 import { prisma } from "@/lib/db/prisma";
 import { writeAudit } from "@/lib/audit";
 import { requireHouseholdMember, requireUser } from "@/lib/auth/session";

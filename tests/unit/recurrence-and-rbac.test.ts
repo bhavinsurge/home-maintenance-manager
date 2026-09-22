@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { ScheduleFrequency } from "@prisma/client";
+import { ScheduleFrequency } from "@homestead/database";
 import { computeNextDueDate } from "@/lib/schedules/recurrence";
 import { canAssignRole, canManageMembers, roleAtLeast } from "@/lib/auth/rbac";
-import { HouseholdRole } from "@prisma/client";
+import { HouseholdRole } from "@homestead/database";
 import { AppError } from "@/lib/errors/app-error";
 
 describe("computeNextDueDate", () => {

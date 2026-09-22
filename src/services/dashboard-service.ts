@@ -5,7 +5,7 @@ import { getRequestId } from "@/lib/http/request";
 import { handleRouteError, ok } from "@/lib/http/response";
 import { cacheGet, cacheSet } from "@/lib/cache/redis";
 import { addDays } from "date-fns";
-import { HouseholdRole } from "@prisma/client";
+import { HouseholdRole } from "@homestead/database";
 import { paginationSchema } from "@/lib/validation/schemas";
 
 export async function getDashboard(request: NextRequest, householdId: string) {

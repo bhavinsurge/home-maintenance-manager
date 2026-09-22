@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "@homestead/database";
 
 export async function writeAudit(input: {
   householdId?: string | null;

@@ -1,5 +1,5 @@
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
-import { ScheduleFrequency } from "@prisma/client";
+import { ScheduleFrequency } from "@homestead/database";
 import { validationError } from "@/lib/errors/app-error";
 
 export function computeNextDueDate(

@@ -1,0 +1,39 @@
+{
+  "name": "@homestead/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "generate": "prisma generate --schema=prisma/schema.prisma",
+    "migrate": "node ../../scripts/run-with-env.js prisma migrate deploy --schema=prisma/schema.prisma",
+    "migrate:dev": "node ../../scripts/run-with-env.js prisma migrate dev --schema=prisma/schema.prisma",
+    "seed": "node ../../scripts/run-with-env.js tsx prisma/seed.ts",
+    "studio": "node ../../scripts/run-with-env.js prisma studio --schema=prisma/schema.prisma",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo 'no lint configured for database package'"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20",
+    "bcryptjs": "^3.0.3",
+    "date-fns": "^4.4.0",
+    "prisma": "6.19.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma",
+    "seed": "tsx prisma/seed.ts"
+  }
+}
