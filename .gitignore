@@ -41,5 +41,8 @@ apps/*/dist
 # turbo
 .turbo
 
+# migration quarantine (obsolete monolith snapshot; remove after final gate)
+.migration-backup/
+
 # next
 next-env.d.ts

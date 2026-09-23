@@ -33,6 +33,7 @@ services:
       retries: 10
 
   minio:
+    profiles: ["minio"]
     image: minio/minio:latest
     container_name: hmm-minio
     restart: unless-stopped
@@ -53,6 +54,7 @@ services:
       start_period: 10s
 
   minio-init:
+    profiles: ["minio"]
     image: minio/mc:latest
     container_name: hmm-minio-init
     depends_on:

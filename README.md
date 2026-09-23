@@ -56,10 +56,10 @@ ONE Git repository. Package manager: **Yarn** (`yarn.lock`). Task runner: **Turb
 
 ```bash
 yarn infra:up
-# or: docker compose -f infrastructure/docker-compose.yml up -d
+# Postgres + Redis. Optional MinIO (when image available):
+# docker compose -f infrastructure/docker-compose.yml --profile minio up -d
+# Without MinIO, document uploads use local .data/uploads fallback.
 ```
-
-Ports: Postgres **5434**, Redis **6380**, MinIO **9010/9011**.
 
 ### Install & database
 
