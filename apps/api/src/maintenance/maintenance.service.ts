@@ -1,11 +1,11 @@
-import { Injectable } from "@nestjs/common";
-import { HouseholdRole, ScheduleFrequency } from "@homestead/database";
-import { PrismaService } from "../database/prisma.service";
-import { HouseholdRbacService } from "../auth/household-rbac.service";
-import { notFound } from "../common/errors/app-error";
-import { cacheDel } from "../lib/redis";
-import { computeNextDueDate } from "../lib/recurrence";
-import type { z } from "zod";
+import { Injectable } from '@nestjs/common';
+import { HouseholdRole, ScheduleFrequency } from '@homestead/database';
+import { PrismaService } from '../database/prisma.service';
+import { HouseholdRbacService } from '../auth/household-rbac.service';
+import { notFound } from '../common/errors/app-error';
+import { cacheDel } from '../lib/redis';
+import { computeNextDueDate } from '../lib/recurrence';
+import type { z } from 'zod';
 import type {
   completeScheduleSchema,
   scheduleCreateSchema,
@@ -14,7 +14,7 @@ import type {
   serviceRecordUpdateSchema,
   warrantyCreateSchema,
   warrantyUpdateSchema,
-} from "../lib/schemas";
+} from '../lib/schemas';
 
 @Injectable()
 export class MaintenanceService {
@@ -31,8 +31,12 @@ export class MaintenanceService {
     const asset = await this.prisma.asset.findFirst({
       where: { id: assetId, deletedAt: null },
     });
-    if (!asset) throw notFound("Asset not found");
-    const membership = await this.rbac.requireHouseholdMember(userId, asset.householdId, min);
+    if (!asset) throw notFound('Asset not found');
+    const membership = await this.rbac.requireHouseholdMember(
+      userId,
+      asset.householdId,
+      min,
+    );
     return { asset, membership };
   }
 
@@ -40,7 +44,7 @@ export class MaintenanceService {
     await this.assetMembership(userId, assetId);
     const items = await this.prisma.maintenanceSchedule.findMany({
       where: { assetId },
-      orderBy: [{ isActive: "desc" }, { nextDueAt: "asc" }],
+      orderBy: [{ isActive: 'desc' }, { nextDueAt: 'asc' }],
     });
     return { items };
   }
@@ -50,14 +54,21 @@ export class MaintenanceService {
     assetId: string,
     body: z.infer<typeof scheduleCreateSchema>,
   ) {
-    const { asset } = await this.assetMembership(userId, assetId, HouseholdRole.MANAGER);
+    const { asset } = await this.assetMembership(
+      userId,
+      assetId,
+      HouseholdRole.MANAGER,
+    );
     const schedule = await this.prisma.maintenanceSchedule.create({
       data: {
         assetId,
         title: body.title,
         description: body.description ?? null,
         frequency: body.frequency,
-        intervalDays: body.frequency === ScheduleFrequency.CUSTOM_DAYS ? body.intervalDays : null,
+        intervalDays:
+          body.frequency === ScheduleFrequency.CUSTOM_DAYS
+            ? body.intervalDays
+            : null,
         nextDueAt: new Date(body.nextDueAt),
         reminderDaysBefore: body.reminderDaysBefore ?? 7,
       },
@@ -66,8 +77,8 @@ export class MaintenanceService {
     await this.prisma.writeAudit({
       householdId: asset.householdId,
       actorUserId: userId,
-      action: "SCHEDULE_CREATED",
-      entityType: "maintenance_schedule",
+      action: 'SCHEDULE_CREATED',
+      entityType: 'maintenance_schedule',
       entityId: schedule.id,
     });
     return { schedule };
@@ -82,7 +93,8 @@ export class MaintenanceService {
       where: { id: scheduleId },
       include: { asset: true },
     });
-    if (!schedule || schedule.asset.deletedAt) throw notFound("Schedule not found");
+    if (!schedule || schedule.asset.deletedAt)
+      throw notFound('Schedule not found');
     await this.rbac.requireHouseholdMember(
       userId,
       schedule.asset.householdId,
@@ -94,7 +106,8 @@ export class MaintenanceService {
         ...body,
         nextDueAt: body.nextDueAt ? new Date(body.nextDueAt) : undefined,
         intervalDays:
-          body.frequency === ScheduleFrequency.CUSTOM_DAYS || body.intervalDays !== undefined
+          body.frequency === ScheduleFrequency.CUSTOM_DAYS ||
+          body.intervalDays !== undefined
             ? body.intervalDays
             : undefined,
       },
@@ -108,7 +121,8 @@ export class MaintenanceService {
       where: { id: scheduleId },
       include: { asset: true },
     });
-    if (!schedule || schedule.asset.deletedAt) throw notFound("Schedule not found");
+    if (!schedule || schedule.asset.deletedAt)
+      throw notFound('Schedule not found');
     await this.rbac.requireHouseholdMember(
       userId,
       schedule.asset.householdId,
@@ -127,14 +141,17 @@ export class MaintenanceService {
     scheduleId: string,
     body: z.infer<typeof completeScheduleSchema>,
   ) {
-    const performedAt = body.performedAt ? new Date(body.performedAt) : new Date();
+    const performedAt = body.performedAt
+      ? new Date(body.performedAt)
+      : new Date();
 
     const result = await this.prisma.$transaction(async (tx) => {
       const schedule = await tx.maintenanceSchedule.findUnique({
         where: { id: scheduleId },
         include: { asset: true },
       });
-      if (!schedule || schedule.asset.deletedAt) throw notFound("Schedule not found");
+      if (!schedule || schedule.asset.deletedAt)
+        throw notFound('Schedule not found');
 
       const membership = await tx.householdMember.findUnique({
         where: {
@@ -144,7 +161,7 @@ export class MaintenanceService {
           },
         },
       });
-      if (!membership) throw notFound("Schedule not found");
+      if (!membership) throw notFound('Schedule not found');
 
       const serviceRecord = await tx.serviceRecord.create({
         data: {
@@ -159,7 +176,11 @@ export class MaintenanceService {
         },
       });
 
-      const nextDue = computeNextDueDate(schedule.frequency, performedAt, schedule.intervalDays);
+      const nextDue = computeNextDueDate(
+        schedule.frequency,
+        performedAt,
+        schedule.intervalDays,
+      );
       const updatedSchedule = await tx.maintenanceSchedule.update({
         where: { id: schedule.id },
         data: {
@@ -180,8 +201,8 @@ export class MaintenanceService {
     await this.prisma.writeAudit({
       householdId: result.householdId,
       actorUserId: userId,
-      action: "SCHEDULE_COMPLETED",
-      entityType: "maintenance_schedule",
+      action: 'SCHEDULE_COMPLETED',
+      entityType: 'maintenance_schedule',
       entityId: scheduleId,
       metadata: { serviceRecordId: result.serviceRecord.id },
     });
@@ -196,7 +217,7 @@ export class MaintenanceService {
     await this.assetMembership(userId, assetId);
     const items = await this.prisma.serviceRecord.findMany({
       where: { assetId },
-      orderBy: { performedAt: "desc" },
+      orderBy: { performedAt: 'desc' },
     });
     return { items };
   }
@@ -223,8 +244,8 @@ export class MaintenanceService {
     await this.prisma.writeAudit({
       householdId: asset.householdId,
       actorUserId: userId,
-      action: "SERVICE_RECORD_CREATED",
-      entityType: "service_record",
+      action: 'SERVICE_RECORD_CREATED',
+      entityType: 'service_record',
       entityId: record.id,
     });
     return { serviceRecord: record };
@@ -239,12 +260,17 @@ export class MaintenanceService {
       where: { id: recordId },
       include: { asset: true },
     });
-    if (!record || record.asset.deletedAt) throw notFound("Service record not found");
-    const membership = await this.rbac.requireHouseholdMember(userId, record.asset.householdId);
+    if (!record || record.asset.deletedAt)
+      throw notFound('Service record not found');
+    const membership = await this.rbac.requireHouseholdMember(
+      userId,
+      record.asset.householdId,
+    );
     const isManager =
-      membership.role === HouseholdRole.OWNER || membership.role === HouseholdRole.MANAGER;
+      membership.role === HouseholdRole.OWNER ||
+      membership.role === HouseholdRole.MANAGER;
     if (!isManager && record.createdById !== userId) {
-      throw notFound("Service record not found");
+      throw notFound('Service record not found');
     }
     const updated = await this.prisma.serviceRecord.update({
       where: { id: recordId },
@@ -261,7 +287,8 @@ export class MaintenanceService {
       where: { id: recordId },
       include: { asset: true },
     });
-    if (!record || record.asset.deletedAt) throw notFound("Service record not found");
+    if (!record || record.asset.deletedAt)
+      throw notFound('Service record not found');
     await this.rbac.requireHouseholdMember(
       userId,
       record.asset.householdId,
@@ -276,7 +303,7 @@ export class MaintenanceService {
     await this.assetMembership(userId, assetId);
     const items = await this.prisma.warranty.findMany({
       where: { assetId },
-      orderBy: { endsOn: "asc" },
+      orderBy: { endsOn: 'asc' },
     });
     return { items };
   }
@@ -286,7 +313,11 @@ export class MaintenanceService {
     assetId: string,
     body: z.infer<typeof warrantyCreateSchema>,
   ) {
-    const { asset } = await this.assetMembership(userId, assetId, HouseholdRole.MANAGER);
+    const { asset } = await this.assetMembership(
+      userId,
+      assetId,
+      HouseholdRole.MANAGER,
+    );
     const warranty = await this.prisma.warranty.create({
       data: {
         assetId,
@@ -300,8 +331,8 @@ export class MaintenanceService {
     await this.prisma.writeAudit({
       householdId: asset.householdId,
       actorUserId: userId,
-      action: "WARRANTY_CREATED",
-      entityType: "warranty",
+      action: 'WARRANTY_CREATED',
+      entityType: 'warranty',
       entityId: warranty.id,
     });
     return { warranty };
@@ -316,7 +347,8 @@ export class MaintenanceService {
       where: { id: warrantyId },
       include: { asset: true },
     });
-    if (!warranty || warranty.asset.deletedAt) throw notFound("Warranty not found");
+    if (!warranty || warranty.asset.deletedAt)
+      throw notFound('Warranty not found');
     await this.rbac.requireHouseholdMember(
       userId,
       warranty.asset.householdId,
@@ -339,7 +371,8 @@ export class MaintenanceService {
       where: { id: warrantyId },
       include: { asset: true },
     });
-    if (!warranty || warranty.asset.deletedAt) throw notFound("Warranty not found");
+    if (!warranty || warranty.asset.deletedAt)
+      throw notFound('Warranty not found');
     await this.rbac.requireHouseholdMember(
       userId,
       warranty.asset.householdId,

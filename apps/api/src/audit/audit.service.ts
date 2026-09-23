@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { HouseholdRole } from "@homestead/database";
-import { PrismaService } from "../database/prisma.service";
-import { HouseholdRbacService } from "../auth/household-rbac.service";
+import { Injectable } from '@nestjs/common';
+import { HouseholdRole } from '@homestead/database';
+import { PrismaService } from '../database/prisma.service';
+import { HouseholdRbacService } from '../auth/household-rbac.service';
 
 @Injectable()
 export class AuditService {
@@ -15,7 +15,11 @@ export class AuditService {
     householdId: string,
     query: { page: number; pageSize: number; entityType?: string },
   ) {
-    await this.rbac.requireHouseholdMember(userId, householdId, HouseholdRole.MANAGER);
+    await this.rbac.requireHouseholdMember(
+      userId,
+      householdId,
+      HouseholdRole.MANAGER,
+    );
     const where = {
       householdId,
       ...(query.entityType ? { entityType: query.entityType } : {}),
@@ -27,7 +31,7 @@ export class AuditService {
         include: {
           actor: { select: { id: true, fullName: true, email: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),

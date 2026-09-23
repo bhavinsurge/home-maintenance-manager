@@ -1,5 +1,7 @@
 {
-  "buildCommand": "prisma generate && prisma migrate deploy && next build",
+  "buildCommand": "yarn workspace @homestead/database generate && yarn workspace @homestead/database build && yarn workspace @homestead/web build",
+  "installCommand": "yarn install",
   "framework": "nextjs",
-  "installCommand": "npm install"
+  "outputDirectory": "apps/web/.next",
+  "rootDirectory": "."
 }

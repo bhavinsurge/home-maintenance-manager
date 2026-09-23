@@ -1,19 +1,19 @@
-import { z } from "zod";
+import { z } from 'zod';
 import {
   AssetCategory,
   AssetStatus,
   HouseholdRole,
   ScheduleFrequency,
-} from "@homestead/database";
+} from '@homestead/database';
 
 export const registerSchema = z.object({
   email: z.string().email().max(255),
   password: z
     .string()
-    .min(10, "Password must be at least 10 characters")
+    .min(10, 'Password must be at least 10 characters')
     .max(128)
-    .regex(/[A-Za-z]/, "Password must include a letter")
-    .regex(/[0-9]/, "Password must include a number"),
+    .regex(/[A-Za-z]/, 'Password must include a letter')
+    .regex(/[0-9]/, 'Password must include a number'),
   fullName: z.string().trim().min(2).max(120),
 });
 
@@ -38,7 +38,7 @@ export const householdUpdateSchema = householdCreateSchema.partial();
 export const memberAddSchema = z.object({
   email: z.string().email(),
   role: z.nativeEnum(HouseholdRole).refine((r) => r !== HouseholdRole.OWNER, {
-    message: "Cannot assign OWNER via invite; transfer ownership separately",
+    message: 'Cannot assign OWNER via invite; transfer ownership separately',
   }),
 });
 
@@ -54,7 +54,12 @@ export const assetCreateSchema = z.object({
   model: z.string().trim().max(120).optional().nullable(),
   serialNumber: z.string().trim().max(120).optional().nullable(),
   purchaseDate: z.string().date().optional().nullable(),
-  purchasePrice: z.number().nonnegative().max(1_000_000_000).optional().nullable(),
+  purchasePrice: z
+    .number()
+    .nonnegative()
+    .max(1_000_000_000)
+    .optional()
+    .nullable(),
   locationNotes: z.string().trim().max(500).optional().nullable(),
   notes: z.string().trim().max(2000).optional().nullable(),
 });
@@ -73,9 +78,9 @@ export const scheduleCreateSchema = z
   .superRefine((val, ctx) => {
     if (val.frequency === ScheduleFrequency.CUSTOM_DAYS && !val.intervalDays) {
       ctx.addIssue({
-        code: "custom",
-        message: "intervalDays is required for CUSTOM_DAYS",
-        path: ["intervalDays"],
+        code: 'custom',
+        message: 'intervalDays is required for CUSTOM_DAYS',
+        path: ['intervalDays'],
       });
     }
   });
@@ -92,9 +97,9 @@ export const scheduleUpdateSchema = z
   .superRefine((val, ctx) => {
     if (val.frequency === ScheduleFrequency.CUSTOM_DAYS && !val.intervalDays) {
       ctx.addIssue({
-        code: "custom",
-        message: "intervalDays is required for CUSTOM_DAYS",
-        path: ["intervalDays"],
+        code: 'custom',
+        message: 'intervalDays is required for CUSTOM_DAYS',
+        path: ['intervalDays'],
       });
     }
   });
@@ -134,9 +139,9 @@ export const warrantyCreateSchema = z
   .superRefine((val, ctx) => {
     if (val.endsOn < val.startsOn) {
       ctx.addIssue({
-        code: "custom",
-        message: "endsOn must be on or after startsOn",
-        path: ["endsOn"],
+        code: 'custom',
+        message: 'endsOn must be on or after startsOn',
+        path: ['endsOn'],
       });
     }
   });
@@ -151,9 +156,9 @@ export const warrantyUpdateSchema = z
   .superRefine((val, ctx) => {
     if (val.startsOn && val.endsOn && val.endsOn < val.startsOn) {
       ctx.addIssue({
-        code: "custom",
-        message: "endsOn must be on or after startsOn",
-        path: ["endsOn"],
+        code: 'custom',
+        message: 'endsOn must be on or after startsOn',
+        path: ['endsOn'],
       });
     }
   });
@@ -181,7 +186,7 @@ export const notificationListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
   unreadOnly: z
-    .union([z.literal("true"), z.literal("false"), z.boolean()])
+    .union([z.literal('true'), z.literal('false'), z.boolean()])
     .optional()
-    .transform((v) => v === true || v === "true"),
+    .transform((v) => v === true || v === 'true'),
 });

@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { HouseholdRole } from "@homestead/database";
-import { PrismaService } from "../database/prisma.service";
-import { forbidden } from "../common/errors/app-error";
-import { roleAtLeast } from "../lib/rbac";
+import { Injectable } from '@nestjs/common';
+import { HouseholdRole } from '@homestead/database';
+import { PrismaService } from '../database/prisma.service';
+import { forbidden } from '../common/errors/app-error';
+import { roleAtLeast } from '../lib/rbac';
 
 @Injectable()
 export class HouseholdRbacService {
@@ -18,9 +18,9 @@ export class HouseholdRbacService {
         householdId_userId: { householdId, userId },
       },
     });
-    if (!membership) throw forbidden("You are not a member of this household");
+    if (!membership) throw forbidden('You are not a member of this household');
     if (!roleAtLeast(membership.role, minimumRole)) {
-      throw forbidden("Insufficient household permissions");
+      throw forbidden('Insufficient household permissions');
     }
     return membership;
   }

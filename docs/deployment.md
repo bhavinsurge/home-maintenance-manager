@@ -1,78 +1,56 @@
-# Deployment — Home Maintenance Manager
+# Deployment — Homestead Keep
 
-## Prerequisites
-
-- Node.js 20+
-- Docker + Docker Compose
-- (Optional) Vercel CLI for frontend deploy
-
-## Local (recommended)
+## Local
 
 ```bash
-cp .env.example .env
-docker compose up -d
-npm install
-npm run db:migrate
-npm run db:seed
-npm run dev          # terminal 1
-npm run worker       # terminal 2
+yarn infra:up
+yarn install
+yarn db:generate && yarn db:migrate:deploy && yarn db:seed
+yarn api:dev    # :4005
+yarn web:dev    # :3005
+yarn worker:dev
 ```
 
-App: http://localhost:3005  
-MinIO console: http://localhost:9011 (minioadmin / minioadmin)  
-PostgreSQL: localhost:5434  
-Redis: localhost:6380
+Compose file: `infrastructure/docker-compose.yml`
 
-## Environment Variables
+## Environment
 
-See `.env.example` for purpose, required/optional, and examples.
+See `.env.example`. Critical variables:
 
-## Database
+| Variable | Used by |
+| --- | --- |
+| `DATABASE_URL` | api, worker, database package |
+| `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | api |
+| `REDIS_URL` | api (rate limit + cache) |
+| `MINIO_*` | api (documents) |
+| `API_URL` | web (rewrite target) |
+| `NEXT_PUBLIC_APP_URL` | web |
 
-```bash
-npm run db:migrate
-npm run db:seed
-npm run db:reset    # DESTRUCTIVE — local/Docker only
-```
+Never commit `.env`.
+
+## Production topology
+
+| Component | Target |
+| --- | --- |
+| `apps/web` | Vercel / static Node Next host |
+| `apps/api` | Node 20+ process (`yarn api:start`) |
+| `apps/worker` | Node process (`yarn worker:start`) |
+| PostgreSQL | Managed or Docker |
+| Redis | Optional but recommended |
+| MinIO | Self-hosted S3-compatible |
+
+Vercel cannot run the Nest API or worker. Point web rewrites/`API_URL` at the public API origin, or put a reverse proxy in front so the browser stays same-origin.
 
 ## Build
 
 ```bash
-npm run build
-npm run start
+yarn build
 ```
-
-## Vercel (frontend + API routes)
-
-1. Push repo to GitHub / import in Vercel
-2. Set env vars (DATABASE_URL must be reachable from Vercel — typically a hosted Postgres free tier or tunnel; for portfolio, prefer documenting local-first)
-3. Build command: `prisma generate && next build`
-4. **Limitations**:
-   - Reminder worker must run elsewhere (`npm run worker`)
-   - MinIO must be publicly reachable or replaced with compatible free object storage
-   - Redis for rate limits optional but recommended
-
-If Vercel auth is required interactively, the developer must run `vercel login` themselves.
-
-## Worker Deployment
-
-Run on any always-on free host (Fly.io free, Railway trial, or local machine):
-
-```bash
-npm run worker
-```
-
-Requires `DATABASE_URL` and optional `REDIS_URL`.
 
 ## Troubleshooting
 
 | Issue | Fix |
 | --- | --- |
-| Prisma P1001 | Ensure Docker Postgres healthy; check port 5433 |
-| MinIO upload fail | `docker compose ps`; recreate bucket via seed/init |
-| Rate limit always 429 | Flush Redis: `docker compose exec redis redis-cli FLUSHDB` |
-| JWT errors | Ensure secrets are long random strings |
-
-## Safety
-
-Never run `db:reset` against a non-Docker / unknown database. Confirm `DATABASE_URL` database name is `home_maintenance` or `home_maintenance_test`.
+| Prisma P1001 | `yarn infra:up`; check port 5434 |
+| Proxy 502 | Ensure API is up on 4005; check `API_URL` |
+| Cookie missing after login | Use same host for web (localhost vs 127.0.0.1 consistently) |

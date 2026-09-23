@@ -1,6 +1,6 @@
-import { Injectable } from "@nestjs/common";
-import { Prisma, prisma as prismaSingleton } from "@homestead/database";
-import type { PrismaClient } from "@homestead/database";
+import { Injectable } from '@nestjs/common';
+import { Prisma, prisma as prismaSingleton } from '@homestead/database';
+import type { PrismaClient } from '@homestead/database';
 
 @Injectable()
 export class PrismaService {
@@ -40,7 +40,9 @@ export class PrismaService {
     return this.client.auditLog;
   }
 
-  $transaction: PrismaClient["$transaction"] = this.client.$transaction.bind(this.client);
+  $transaction: PrismaClient['$transaction'] = this.client.$transaction.bind(
+    this.client,
+  );
 
   async writeAudit(input: {
     householdId?: string | null;

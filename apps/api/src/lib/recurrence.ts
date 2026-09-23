@@ -1,6 +1,6 @@
-import { addDays, addMonths, addWeeks, addYears } from "date-fns";
-import { ScheduleFrequency } from "@homestead/database";
-import { validationError } from "../common/errors/app-error";
+import { addDays, addMonths, addWeeks, addYears } from 'date-fns';
+import { ScheduleFrequency } from '@homestead/database';
+import { validationError } from '../common/errors/app-error';
 
 export function computeNextDueDate(
   frequency: ScheduleFrequency,
@@ -22,11 +22,13 @@ export function computeNextDueDate(
       return addYears(from, 1);
     case ScheduleFrequency.CUSTOM_DAYS: {
       if (!intervalDays || intervalDays < 1) {
-        throw validationError("intervalDays must be >= 1 for CUSTOM_DAYS frequency");
+        throw validationError(
+          'intervalDays must be >= 1 for CUSTOM_DAYS frequency',
+        );
       }
       return addDays(from, intervalDays);
     }
     default:
-      throw validationError("Unsupported schedule frequency");
+      throw validationError('Unsupported schedule frequency');
   }
 }

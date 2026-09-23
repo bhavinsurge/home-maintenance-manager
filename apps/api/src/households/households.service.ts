@@ -1,17 +1,22 @@
-import { Injectable } from "@nestjs/common";
-import { HouseholdRole, Prisma } from "@homestead/database";
-import { PrismaService } from "../database/prisma.service";
-import { HouseholdRbacService } from "../auth/household-rbac.service";
-import { badRequest, conflict, forbidden, notFound } from "../common/errors/app-error";
-import { canAssignRole, canManageMembers } from "../lib/rbac";
-import { cacheDel } from "../lib/redis";
-import type { z } from "zod";
+import { Injectable } from '@nestjs/common';
+import { HouseholdRole, Prisma } from '@homestead/database';
+import { PrismaService } from '../database/prisma.service';
+import { HouseholdRbacService } from '../auth/household-rbac.service';
+import {
+  badRequest,
+  conflict,
+  forbidden,
+  notFound,
+} from '../common/errors/app-error';
+import { canAssignRole, canManageMembers } from '../lib/rbac';
+import { cacheDel } from '../lib/redis';
+import type { z } from 'zod';
 import type {
   householdCreateSchema,
   householdUpdateSchema,
   memberAddSchema,
   memberRoleSchema,
-} from "../lib/schemas";
+} from '../lib/schemas';
 
 @Injectable()
 export class HouseholdsService {
@@ -24,7 +29,7 @@ export class HouseholdsService {
     const memberships = await this.prisma.householdMember.findMany({
       where: { userId },
       include: { household: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: 'asc' },
     });
     return {
       items: memberships.map((m) => ({
@@ -63,8 +68,8 @@ export class HouseholdsService {
     await this.prisma.writeAudit({
       householdId: household.id,
       actorUserId: userId,
-      action: "HOUSEHOLD_CREATED",
-      entityType: "household",
+      action: 'HOUSEHOLD_CREATED',
+      entityType: 'household',
       entityId: household.id,
       metadata: { name: household.name },
     });
@@ -73,9 +78,14 @@ export class HouseholdsService {
   }
 
   async get(userId: string, householdId: string) {
-    const membership = await this.rbac.requireHouseholdMember(userId, householdId);
-    const household = await this.prisma.household.findUnique({ where: { id: householdId } });
-    if (!household) throw notFound("Household not found");
+    const membership = await this.rbac.requireHouseholdMember(
+      userId,
+      householdId,
+    );
+    const household = await this.prisma.household.findUnique({
+      where: { id: householdId },
+    });
+    if (!household) throw notFound('Household not found');
     return { household, role: membership.role };
   }
 
@@ -84,7 +94,11 @@ export class HouseholdsService {
     householdId: string,
     body: z.infer<typeof householdUpdateSchema>,
   ) {
-    await this.rbac.requireHouseholdMember(userId, householdId, HouseholdRole.MANAGER);
+    await this.rbac.requireHouseholdMember(
+      userId,
+      householdId,
+      HouseholdRole.MANAGER,
+    );
     const household = await this.prisma.household.update({
       where: { id: householdId },
       data: body,
@@ -93,21 +107,25 @@ export class HouseholdsService {
     await this.prisma.writeAudit({
       householdId,
       actorUserId: userId,
-      action: "HOUSEHOLD_UPDATED",
-      entityType: "household",
+      action: 'HOUSEHOLD_UPDATED',
+      entityType: 'household',
       entityId: householdId,
-      metadata: body as Prisma.InputJsonValue,
+      metadata: body,
     });
     return { household };
   }
 
   async remove(userId: string, householdId: string) {
-    await this.rbac.requireHouseholdMember(userId, householdId, HouseholdRole.OWNER);
+    await this.rbac.requireHouseholdMember(
+      userId,
+      householdId,
+      HouseholdRole.OWNER,
+    );
     await this.prisma.household.delete({ where: { id: householdId } });
     await this.prisma.writeAudit({
       actorUserId: userId,
-      action: "HOUSEHOLD_DELETED",
-      entityType: "household",
+      action: 'HOUSEHOLD_DELETED',
+      entityType: 'household',
       entityId: householdId,
     });
     return { deleted: true };
@@ -118,7 +136,7 @@ export class HouseholdsService {
     const members = await this.prisma.householdMember.findMany({
       where: { householdId },
       include: { user: { select: { id: true, email: true, fullName: true } } },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: 'asc' },
     });
     return {
       items: members.map((m) => ({
@@ -141,12 +159,15 @@ export class HouseholdsService {
       HouseholdRole.MANAGER,
     );
     if (!canAssignRole(actor.role, body.role)) {
-      throw forbidden("You cannot assign this role");
+      throw forbidden('You cannot assign this role');
     }
     const target = await this.prisma.user.findUnique({
       where: { email: body.email.toLowerCase() },
     });
-    if (!target) throw notFound("No user exists with that email. They must register first.");
+    if (!target)
+      throw notFound(
+        'No user exists with that email. They must register first.',
+      );
 
     try {
       const member = await this.prisma.householdMember.create({
@@ -155,13 +176,15 @@ export class HouseholdsService {
           userId: target.id,
           role: body.role,
         },
-        include: { user: { select: { id: true, email: true, fullName: true } } },
+        include: {
+          user: { select: { id: true, email: true, fullName: true } },
+        },
       });
       await this.prisma.writeAudit({
         householdId,
         actorUserId: userId,
-        action: "MEMBER_ADDED",
-        entityType: "household_member",
+        action: 'MEMBER_ADDED',
+        entityType: 'household_member',
         entityId: member.id,
         metadata: { email: target.email, role: body.role },
       });
@@ -174,8 +197,11 @@ export class HouseholdsService {
         },
       };
     } catch (err) {
-      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
-        throw conflict("User is already a member of this household");
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        throw conflict('User is already a member of this household');
       }
       throw err;
     }
@@ -195,16 +221,18 @@ export class HouseholdsService {
     const member = await this.prisma.householdMember.findFirst({
       where: { id: memberId, householdId },
     });
-    if (!member) throw notFound("Member not found");
+    if (!member) throw notFound('Member not found');
 
     if (body.role === HouseholdRole.OWNER) {
-      throw badRequest("Use ownership transfer flow; cannot set OWNER via role patch");
+      throw badRequest(
+        'Use ownership transfer flow; cannot set OWNER via role patch',
+      );
     }
     if (member.role === HouseholdRole.OWNER) {
       const ownerCount = await this.prisma.householdMember.count({
         where: { householdId, role: HouseholdRole.OWNER },
       });
-      if (ownerCount <= 1) throw badRequest("Cannot demote the last OWNER");
+      if (ownerCount <= 1) throw badRequest('Cannot demote the last OWNER');
     }
     if (!canAssignRole(actor.role, body.role)) throw forbidden();
 
@@ -216,8 +244,8 @@ export class HouseholdsService {
     await this.prisma.writeAudit({
       householdId,
       actorUserId: userId,
-      action: "MEMBER_ROLE_UPDATED",
-      entityType: "household_member",
+      action: 'MEMBER_ROLE_UPDATED',
+      entityType: 'household_member',
       entityId: member.id,
       metadata: { role: body.role },
     });
@@ -240,22 +268,22 @@ export class HouseholdsService {
     const member = await this.prisma.householdMember.findFirst({
       where: { id: memberId, householdId },
     });
-    if (!member) throw notFound("Member not found");
+    if (!member) throw notFound('Member not found');
     if (!canManageMembers(actor.role, member.role)) {
-      throw forbidden("You cannot remove this member");
+      throw forbidden('You cannot remove this member');
     }
     if (member.role === HouseholdRole.OWNER) {
       const ownerCount = await this.prisma.householdMember.count({
         where: { householdId, role: HouseholdRole.OWNER },
       });
-      if (ownerCount <= 1) throw badRequest("Cannot remove the last OWNER");
+      if (ownerCount <= 1) throw badRequest('Cannot remove the last OWNER');
     }
     await this.prisma.householdMember.delete({ where: { id: member.id } });
     await this.prisma.writeAudit({
       householdId,
       actorUserId: userId,
-      action: "MEMBER_REMOVED",
-      entityType: "household_member",
+      action: 'MEMBER_REMOVED',
+      entityType: 'household_member',
       entityId: member.id,
     });
     return { deleted: true };

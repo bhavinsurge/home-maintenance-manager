@@ -13,7 +13,7 @@ test("register → household → asset → schedule → complete", async ({ page
 
   await page.getByRole("button", { name: "New household" }).click();
   await page.getByLabel("Household name").fill("E2E Household");
-  await page.getByRole("button", { name: "Create household" }).click();
+  await page.locator("form").getByRole("button", { name: "Create household" }).click();
   await page.getByRole("link", { name: /E2E Household/ }).click();
   await page.waitForURL("**/households/**");
 

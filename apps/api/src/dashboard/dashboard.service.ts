@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { addDays } from "date-fns";
-import { PrismaService } from "../database/prisma.service";
-import { HouseholdRbacService } from "../auth/household-rbac.service";
-import { cacheGet, cacheSet } from "../lib/redis";
+import { Injectable } from '@nestjs/common';
+import { addDays } from 'date-fns';
+import { PrismaService } from '../database/prisma.service';
+import { HouseholdRbacService } from '../auth/household-rbac.service';
+import { cacheGet, cacheSet } from '../lib/redis';
 
 @Injectable()
 export class DashboardService {
@@ -41,7 +41,7 @@ export class DashboardService {
           asset: { householdId, deletedAt: null },
         },
         include: { asset: { select: { id: true, name: true } } },
-        orderBy: { nextDueAt: "asc" },
+        orderBy: { nextDueAt: 'asc' },
         take: 10,
       }),
       this.prisma.maintenanceSchedule.count({
@@ -58,7 +58,7 @@ export class DashboardService {
           asset: { householdId, deletedAt: null },
         },
         include: { asset: { select: { id: true, name: true } } },
-        orderBy: { nextDueAt: "asc" },
+        orderBy: { nextDueAt: 'asc' },
         take: 10,
       }),
       this.prisma.warranty.findMany({
@@ -67,13 +67,13 @@ export class DashboardService {
           asset: { householdId, deletedAt: null },
         },
         include: { asset: { select: { id: true, name: true } } },
-        orderBy: { endsOn: "asc" },
+        orderBy: { endsOn: 'asc' },
         take: 10,
       }),
       this.prisma.serviceRecord.findMany({
         where: { asset: { householdId, deletedAt: null } },
         include: { asset: { select: { id: true, name: true } } },
-        orderBy: { performedAt: "desc" },
+        orderBy: { performedAt: 'desc' },
         take: 8,
       }),
       this.prisma.notification.count({

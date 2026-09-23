@@ -1,13 +1,13 @@
-import { Injectable } from "@nestjs/common";
-import { Response } from "express";
-import { PrismaService } from "../database/prisma.service";
-import { conflict, unauthorized } from "../common/errors/app-error";
+import { Injectable } from '@nestjs/common';
+import { Response } from 'express';
+import { PrismaService } from '../database/prisma.service';
+import { conflict, unauthorized } from '../common/errors/app-error';
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
   accessCookieOptions,
   refreshCookieOptions,
-} from "../lib/cookies";
+} from '../lib/cookies';
 import {
   generateRefreshToken,
   hashPassword,
@@ -15,10 +15,10 @@ import {
   refreshExpiresAt,
   signAccessToken,
   verifyPassword,
-} from "../lib/tokens";
-import type { AuthUser } from "./auth.types";
-import type { z } from "zod";
-import type { loginSchema, registerSchema } from "../lib/schemas";
+} from '../lib/tokens';
+import type { AuthUser } from './auth.types';
+import type { z } from 'zod';
+import type { loginSchema, registerSchema } from '../lib/schemas';
 
 type RegisterInput = z.infer<typeof registerSchema>;
 type LoginInput = z.infer<typeof loginSchema>;
@@ -32,7 +32,10 @@ export class AuthService {
     user: { id: string; email: string; fullName: string },
     meta: { userAgent?: string; ip?: string },
   ) {
-    const accessToken = await signAccessToken({ sub: user.id, email: user.email });
+    const accessToken = await signAccessToken({
+      sub: user.id,
+      email: user.email,
+    });
     const refreshToken = generateRefreshToken();
     await this.prisma.refreshToken.create({
       data: {
@@ -55,7 +58,7 @@ export class AuthService {
     const existing = await this.prisma.user.findUnique({
       where: { email: body.email.toLowerCase() },
     });
-    if (existing) throw conflict("An account with this email already exists");
+    if (existing) throw conflict('An account with this email already exists');
 
     const user = await this.prisma.user.create({
       data: {
@@ -68,8 +71,8 @@ export class AuthService {
 
     await this.prisma.writeAudit({
       actorUserId: user.id,
-      action: "USER_REGISTERED",
-      entityType: "user",
+      action: 'USER_REGISTERED',
+      entityType: 'user',
       entityId: user.id,
     });
 
@@ -77,19 +80,23 @@ export class AuthService {
     return { user };
   }
 
-  async login(body: LoginInput, res: Response, meta: { userAgent?: string; ip?: string }) {
+  async login(
+    body: LoginInput,
+    res: Response,
+    meta: { userAgent?: string; ip?: string },
+  ) {
     const user = await this.prisma.user.findUnique({
       where: { email: body.email.toLowerCase() },
     });
     if (!user || !(await verifyPassword(body.password, user.passwordHash))) {
-      throw unauthorized("Invalid email or password");
+      throw unauthorized('Invalid email or password');
     }
 
     const safe = { id: user.id, email: user.email, fullName: user.fullName };
     await this.prisma.writeAudit({
       actorUserId: user.id,
-      action: "USER_LOGIN",
-      entityType: "user",
+      action: 'USER_LOGIN',
+      entityType: 'user',
       entityId: user.id,
     });
     await this.issueSession(res, safe, meta);
@@ -103,8 +110,8 @@ export class AuthService {
         data: { revokedAt: new Date() },
       });
     }
-    res.cookie(ACCESS_COOKIE, "", { ...accessCookieOptions(0), maxAge: 0 });
-    res.cookie(REFRESH_COOKIE, "", { ...refreshCookieOptions(0), maxAge: 0 });
+    res.cookie(ACCESS_COOKIE, '', { ...accessCookieOptions(0), maxAge: 0 });
+    res.cookie(REFRESH_COOKIE, '', { ...refreshCookieOptions(0), maxAge: 0 });
     return { loggedOut: true };
   }
 
@@ -113,12 +120,14 @@ export class AuthService {
     res: Response,
     meta: { userAgent?: string; ip?: string },
   ) {
-    if (!refresh) throw unauthorized("Missing refresh token");
+    if (!refresh) throw unauthorized('Missing refresh token');
 
     const tokenHash = hashToken(refresh);
-    const stored = await this.prisma.refreshToken.findUnique({ where: { tokenHash } });
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { tokenHash },
+    });
     if (!stored || stored.revokedAt || stored.expiresAt < new Date()) {
-      throw unauthorized("Refresh token is invalid or expired");
+      throw unauthorized('Refresh token is invalid or expired');
     }
 
     const user = await this.prisma.user.findUnique({
@@ -150,7 +159,7 @@ export class AuthService {
           },
         },
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { createdAt: 'asc' },
     });
 
     return {

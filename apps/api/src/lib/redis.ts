@@ -1,8 +1,8 @@
-import Redis from "ioredis";
-import { Logger } from "@nestjs/common";
-import { rateLimited } from "../common/errors/app-error";
+import Redis from 'ioredis';
+import { Logger } from '@nestjs/common';
+import { rateLimited } from '../common/errors/app-error';
 
-const logger = new Logger("Redis");
+const logger = new Logger('Redis');
 
 const globalForRedis = globalThis as unknown as {
   nestRedis?: Redis | null;
@@ -18,7 +18,7 @@ function createRedis() {
       enableReadyCheck: true,
       lazyConnect: true,
     });
-    client.on("error", (err) => {
+    client.on('error', (err) => {
       logger.warn(`Redis error: ${err.message}`);
     });
     return client;
@@ -41,11 +41,15 @@ function memoryStore() {
   return globalForRedis.nestMemoryLimits;
 }
 
-export async function consumeRateLimit(key: string, limit: number, windowMs: number) {
+export async function consumeRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+) {
   const redis = getRedis();
   if (redis) {
     try {
-      if (redis.status !== "ready") {
+      if (redis.status !== 'ready') {
         await redis.connect().catch(() => undefined);
       }
       const redisKey = `rl:${key}`;
@@ -60,7 +64,9 @@ export async function consumeRateLimit(key: string, limit: number, windowMs: num
         retryAfterMs: ttl > 0 ? ttl : windowMs,
       };
     } catch (err) {
-      logger.warn(`Redis rate limit failed; using memory fallback: ${String(err)}`);
+      logger.warn(
+        `Redis rate limit failed; using memory fallback: ${String(err)}`,
+      );
     }
   }
 
@@ -80,7 +86,11 @@ export async function consumeRateLimit(key: string, limit: number, windowMs: num
   };
 }
 
-export async function enforceRateLimit(key: string, limit: number, windowMs: number) {
+export async function enforceRateLimit(
+  key: string,
+  limit: number,
+  windowMs: number,
+) {
   const result = await consumeRateLimit(key, limit, windowMs);
   if (!result.allowed) throw rateLimited();
   return result;
@@ -90,7 +100,7 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   const redis = getRedis();
   if (!redis) return null;
   try {
-    if (redis.status !== "ready") await redis.connect().catch(() => undefined);
+    if (redis.status !== 'ready') await redis.connect().catch(() => undefined);
     const raw = await redis.get(`cache:${key}`);
     return raw ? (JSON.parse(raw) as T) : null;
   } catch {
@@ -98,12 +108,16 @@ export async function cacheGet<T>(key: string): Promise<T | null> {
   }
 }
 
-export async function cacheSet(key: string, value: unknown, ttlSeconds: number) {
+export async function cacheSet(
+  key: string,
+  value: unknown,
+  ttlSeconds: number,
+) {
   const redis = getRedis();
   if (!redis) return;
   try {
-    if (redis.status !== "ready") await redis.connect().catch(() => undefined);
-    await redis.set(`cache:${key}`, JSON.stringify(value), "EX", ttlSeconds);
+    if (redis.status !== 'ready') await redis.connect().catch(() => undefined);
+    await redis.set(`cache:${key}`, JSON.stringify(value), 'EX', ttlSeconds);
   } catch {
     // ignore
   }
@@ -113,7 +127,7 @@ export async function cacheDel(patternOrKey: string) {
   const redis = getRedis();
   if (!redis) return;
   try {
-    if (redis.status !== "ready") await redis.connect().catch(() => undefined);
+    if (redis.status !== 'ready') await redis.connect().catch(() => undefined);
     await redis.del(`cache:${patternOrKey}`);
   } catch {
     // ignore

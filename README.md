@@ -2,238 +2,123 @@
 
 ## Overview
 
-Homestead Keep is a production-style home maintenance manager for tracking household assets, recurring maintenance, warranties, service history, document attachments, reminders, and audit history.
+Homestead Keep helps households track assets, warranties, recurring maintenance, service history, documents, and reminders.
 
-## Problem Statement
-
-Households lose track of appliance service intervals, warranty windows, and repair evidence across paper manuals and ad-hoc calendar reminders. This system provides a shared household system of record.
-
-## Goals
-
-- Professional full-stack portfolio demonstration (auth, RBAC, Postgres, jobs, object storage, tests)
-- End-to-end maintenance workflow that works locally with free/open-source tooling only
-- Clean relational modeling and server-enforced authorization
-
-## Key Features
-
-- User authentication (bcrypt + JWT access + rotating refresh cookies)
-- Household/property management with OWNER / MANAGER / MEMBER roles
-- Asset registry with search, filter, pagination, soft delete
-- Recurring maintenance schedules and transactional completion
-- Service history and warranty tracking
-- Document uploads via MinIO
-- Reminder worker with idempotent dispatch → in-app notifications
-- Dashboard aggregates and audit log
-
-## User Roles
-
-| Role | Capabilities |
-| --- | --- |
-| OWNER | Full household control including delete and member management |
-| MANAGER | Manage assets, schedules, warranties, documents; manage MEMBER users |
-| MEMBER | View data; complete schedules; create service records; upload documents |
-
-## Technology Stack
-
-- Next.js 16 (App Router) + React 19 + TypeScript + Tailwind CSS 4
-- PostgreSQL 16 + Prisma 6
-- Redis 7 (rate limiting + short dashboard cache)
-- MinIO (S3-compatible documents)
-- Vitest + Playwright
-- Docker Compose for local infrastructure
+This repository is a **Yarn Workspaces + Turborepo monorepo** with a NestJS API, Next.js web app, reminder worker, and shared Prisma database package.
 
 ## Architecture
 
+```text
+Browser → apps/web (Next.js :3005)
+            ↓ same-origin /api rewrite proxy
+         apps/api (NestJS :4005)
+            ↓
+         @homestead/database (Prisma)
+            ↓
+         PostgreSQL
+
+apps/worker → @homestead/database → PostgreSQL
+```
+
 ```mermaid
 flowchart LR
-  Browser --> NextAPI[Next.js UI + API]
-  NextAPI --> Postgres[(PostgreSQL)]
-  NextAPI --> Redis[(Redis)]
-  NextAPI --> MinIO[(MinIO)]
-  Worker[Reminder Worker] --> Postgres
+  Browser --> Web[apps/web Next.js]
+  Web -->|rewrite /api| API[apps/api NestJS]
+  API --> DBPkg["@homestead/database"]
+  Worker[apps/worker] --> DBPkg
+  DBPkg --> PG[(PostgreSQL)]
+  API --> Redis[(Redis)]
+  API --> MinIO[(MinIO)]
 ```
 
-See `docs/architecture.md` for request, auth, and worker flows.
+## Repository layout
 
-## Architecture Diagram
-
-Detailed diagrams live in:
-
-- `docs/architecture.md`
-- `docs/database-design.md`
-
-## Application Flow
-
-1. Register / login → httpOnly cookies
-2. Create household (becomes OWNER)
-3. Add assets
-4. Create schedules and warranties
-5. Complete maintenance → service record + next due date
-6. Worker emits notifications for due/expiring items
-7. Upload manuals/receipts to MinIO
-
-## Database Architecture
-
-PostgreSQL is the source of truth. Prisma migrations under `prisma/migrations`.
-
-## ER Diagram
-
-See `docs/database-design.md`.
-
-## Database Tables
-
-`users`, `refresh_tokens`, `households`, `household_members`, `assets`, `maintenance_schedules`, `service_records`, `warranties`, `documents`, `notifications`, `reminder_dispatches`, `audit_logs`
-
-## API Documentation
-
-See `docs/api-design.md`. All JSON APIs use:
-
-```json
-{ "success": true, "data": {} }
+```text
+apps/web          Next.js + React UI (no Route Handler backend)
+apps/api          NestJS REST API
+apps/worker       Reminder background process (non-HTTP)
+packages/database Prisma schema, migrations, seed, client (@homestead/database)
+infrastructure/   Docker Compose (Postgres, Redis, MinIO)
+docs/             Engineering documentation
 ```
 
-or
+ONE Git repository. Package manager: **Yarn** (`yarn.lock`). Task runner: **Turborepo**.
 
-```json
-{ "success": false, "error": { "code": "...", "message": "...", "details": null } }
+## Local development
+
+### Prerequisites
+
+- Node.js 20+
+- Yarn 1.22.x
+- Docker
+
+### Start infrastructure
+
+```bash
+yarn infra:up
+# or: docker compose -f infrastructure/docker-compose.yml up -d
 ```
 
-## Authentication
+Ports: Postgres **5434**, Redis **6380**, MinIO **9010/9011**.
 
-- Access JWT (15m) in `hmm_access` httpOnly cookie
-- Refresh token (30d) in `hmm_refresh` httpOnly cookie; stored hashed in DB; rotated on refresh
-- Logout revokes refresh token
-
-## Authorization
-
-Server-side household membership checks via `requireHouseholdMember` and role ranking. Frontend never trusted for permissions.
-
-## Security
-
-See `docs/security.md`. Rate limits on auth and uploads. Secure headers via middleware. No secrets committed.
-
-## Caching
-
-Dashboard summary cached in Redis for 30s per user/household; invalidated on mutations. If Redis is down, queries hit PostgreSQL directly.
-
-## Queue / Background Jobs
-
-`npm run worker` polls every 60s, dispatches idempotent reminders into `notifications`.
-
-## Error Handling
-
-Central `AppError` + `handleRouteError` maps validation/auth/authz/not-found/conflict/rate-limit/internal errors.
-
-## Logging
-
-Structured `pino` logs with redaction of passwords/tokens.
-
-## Testing
-
-- Unit: recurrence, RBAC, password/JWT
-- Integration: schedule completion against Postgres test DB
-- E2E: Playwright critical path
-
-## Performance Considerations
-
-Partial/composite indexes documented in `docs/database-design.md`. List endpoints paginated.
-
-## Local Development
+### Install & database
 
 ```bash
 cp .env.example .env
-docker compose up -d
-npm install
-npx prisma migrate dev --name init
-npm run db:seed
-npm run dev
-# separate terminal
-npm run worker
+yarn install
+yarn db:generate
+yarn db:migrate:deploy
+yarn db:seed
 ```
 
-App: http://localhost:3005  
-Demo users after seed: `alex@example.com` / `Password123!`
-
-PostgreSQL is exposed on host port **5434**, Redis on **6380**, and MinIO on **9010/9011** to avoid colliding with other local services.
-
-## Docker Setup
+### Run applications
 
 ```bash
-docker compose up -d
-docker compose ps
+# three terminals, or use turbo:
+yarn web:dev      # http://localhost:3005
+yarn api:dev      # http://localhost:4005
+yarn worker:dev
 ```
 
-Services: Postgres, Redis, MinIO (+ bucket init).
+Or: `yarn dev` (turbo parallel for web + api + worker).
 
-## Environment Variables
+Demo login: `alex@example.com` / `Password123!`
 
-Documented in `.env.example`.
+### Auth / cookies
+
+The browser talks only to **:3005**. Next.js rewrites `/api/*` to Nest at `API_URL` (default `http://127.0.0.1:4005`). Auth cookies (`hmm_access`, `hmm_refresh`) are httpOnly and flow through the proxy (same-origin to the browser).
+
+## Scripts
+
+| Script | Purpose |
+| --- | --- |
+| `yarn build` | Build all packages/apps |
+| `yarn typecheck` | Typecheck via turbo |
+| `yarn lint` | Lint via turbo |
+| `yarn test` | API unit tests (Jest) |
+| `yarn test:e2e` | Playwright critical path |
+| `yarn db:*` | Prisma generate/migrate/seed |
+| `yarn infra:up` / `infra:down` | Docker services |
+
+## Testing
+
+```bash
+yarn workspace @homestead/api test
+yarn test:e2e
+```
 
 ## Deployment
 
-See `docs/deployment.md`.
+- **apps/web** → Vercel (or similar) — UI only; set `API_URL` for server-side rewrites if used
+- **apps/api** → Node host (Railway/Fly/VM) on port 4005
+- **apps/worker** → always-on Node process
+- **Postgres / Redis / MinIO** → Docker or free/self-hosted infra
 
-- Next.js app can deploy to Vercel
-- Worker, Postgres, Redis, MinIO must run elsewhere (Docker host / free always-on VM)
-- Never require paid SaaS for core functionality
+Do not force API + worker onto Vercel. See `docs/deployment.md`.
 
-## Project Structure
+## Documentation
 
-```text
-src/app            Pages + API routes
-src/components     UI primitives + shell
-src/services       Domain services
-src/lib            Auth, db, cache, storage, validation
-src/workers        Reminder worker
-prisma             Schema + migrations + seed
-docs               Engineering docs
-tests              Unit / integration / e2e
-```
-
-## Screenshots
-
-Run locally and capture:
-
-1. Landing hero
-2. Household dashboard
-3. Asset detail with schedules
-
-## Demo
-
-1. Sign in as seeded user
-2. Open Cedar Street Home dashboard (overdue furnace tune-up)
-3. Complete a schedule
-4. Upload a PDF to an asset
-5. Run worker and inspect Notifications
-
-## Known Limitations
-
-- In-app notifications only (no SMTP/SMS provider)
-- Single-region local object storage
-- Vercel cannot host the reminder worker or MinIO
-- Membership invite requires the invitee to already have an account
-
-## Future Improvements
-
-- Email digest via self-hosted SMTP
-- Calendar export (ICS)
-- Photo capture from mobile
-- Ownership transfer workflow UI
-
-## Engineering Decisions
-
-- Next.js monolith for portfolio clarity
-- Household-scoped RBAC instead of full multi-tenant SaaS
-- MinIO over local disk for portable object-storage patterns
-- Idempotent reminder keys instead of a heavy queue broker
-
-## Trade-offs
-
-| Decision | Upside | Downside |
-| --- | --- | --- |
-| Route Handlers as API | Simple deploy | Less isolated than Nest service |
-| Redis optional | App works without it | Rate limits weaker on multi-instance without Redis |
-| Soft-delete assets | Preserves history | Requires `deleted_at` filters everywhere |
+See `docs/` for product requirements, architecture, database design, API design, security, testing, and deployment.
 
 ## License
 

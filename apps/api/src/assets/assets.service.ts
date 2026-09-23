@@ -1,11 +1,16 @@
-import { Injectable } from "@nestjs/common";
-import { AssetCategory, AssetStatus, HouseholdRole, Prisma } from "@homestead/database";
-import { PrismaService } from "../database/prisma.service";
-import { HouseholdRbacService } from "../auth/household-rbac.service";
-import { notFound } from "../common/errors/app-error";
-import { cacheDel } from "../lib/redis";
-import type { z } from "zod";
-import type { assetCreateSchema, assetUpdateSchema } from "../lib/schemas";
+import { Injectable } from '@nestjs/common';
+import {
+  AssetCategory,
+  AssetStatus,
+  HouseholdRole,
+  Prisma,
+} from '@homestead/database';
+import { PrismaService } from '../database/prisma.service';
+import { HouseholdRbacService } from '../auth/household-rbac.service';
+import { notFound } from '../common/errors/app-error';
+import { cacheDel } from '../lib/redis';
+import type { z } from 'zod';
+import type { assetCreateSchema, assetUpdateSchema } from '../lib/schemas';
 
 @Injectable()
 export class AssetsService {
@@ -22,7 +27,7 @@ export class AssetsService {
     const asset = await this.prisma.asset.findFirst({
       where: { id: assetId, deletedAt: null },
     });
-    if (!asset) throw notFound("Asset not found");
+    if (!asset) throw notFound('Asset not found');
     const membership = await this.rbac.requireHouseholdMember(
       userId,
       asset.householdId,
@@ -49,10 +54,10 @@ export class AssetsService {
       ...(query.q
         ? {
             OR: [
-              { name: { contains: query.q, mode: "insensitive" } },
-              { manufacturer: { contains: query.q, mode: "insensitive" } },
-              { model: { contains: query.q, mode: "insensitive" } },
-              { serialNumber: { contains: query.q, mode: "insensitive" } },
+              { name: { contains: query.q, mode: 'insensitive' } },
+              { manufacturer: { contains: query.q, mode: 'insensitive' } },
+              { model: { contains: query.q, mode: 'insensitive' } },
+              { serialNumber: { contains: query.q, mode: 'insensitive' } },
             ],
           }
         : {}),
@@ -64,7 +69,7 @@ export class AssetsService {
       this.prisma.asset.count({ where }),
       this.prisma.asset.findMany({
         where,
-        orderBy: [{ name: "asc" }],
+        orderBy: [{ name: 'asc' }],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize,
       }),
@@ -84,7 +89,11 @@ export class AssetsService {
     householdId: string,
     body: z.infer<typeof assetCreateSchema>,
   ) {
-    await this.rbac.requireHouseholdMember(userId, householdId, HouseholdRole.MANAGER);
+    await this.rbac.requireHouseholdMember(
+      userId,
+      householdId,
+      HouseholdRole.MANAGER,
+    );
     const asset = await this.prisma.asset.create({
       data: {
         householdId,
@@ -105,8 +114,8 @@ export class AssetsService {
     await this.prisma.writeAudit({
       householdId,
       actorUserId: userId,
-      action: "ASSET_CREATED",
-      entityType: "asset",
+      action: 'ASSET_CREATED',
+      entityType: 'asset',
       entityId: asset.id,
       metadata: { name: asset.name },
     });
@@ -115,22 +124,27 @@ export class AssetsService {
 
   async get(userId: string, assetId: string) {
     const { asset, membership } = await this.loadAssetForUser(userId, assetId);
-    const [schedules, warranties, recentRecords, documents] = await Promise.all([
-      this.prisma.maintenanceSchedule.findMany({
-        where: { assetId, isActive: true },
-        orderBy: { nextDueAt: "asc" },
-      }),
-      this.prisma.warranty.findMany({ where: { assetId }, orderBy: { endsOn: "asc" } }),
-      this.prisma.serviceRecord.findMany({
-        where: { assetId },
-        orderBy: { performedAt: "desc" },
-        take: 10,
-      }),
-      this.prisma.document.findMany({
-        where: { assetId, deletedAt: null },
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+    const [schedules, warranties, recentRecords, documents] = await Promise.all(
+      [
+        this.prisma.maintenanceSchedule.findMany({
+          where: { assetId, isActive: true },
+          orderBy: { nextDueAt: 'asc' },
+        }),
+        this.prisma.warranty.findMany({
+          where: { assetId },
+          orderBy: { endsOn: 'asc' },
+        }),
+        this.prisma.serviceRecord.findMany({
+          where: { assetId },
+          orderBy: { performedAt: 'desc' },
+          take: 10,
+        }),
+        this.prisma.document.findMany({
+          where: { assetId, deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+        }),
+      ],
+    );
     return {
       asset,
       role: membership.role,
@@ -141,8 +155,16 @@ export class AssetsService {
     };
   }
 
-  async update(userId: string, assetId: string, body: z.infer<typeof assetUpdateSchema>) {
-    const { asset } = await this.loadAssetForUser(userId, assetId, HouseholdRole.MANAGER);
+  async update(
+    userId: string,
+    assetId: string,
+    body: z.infer<typeof assetUpdateSchema>,
+  ) {
+    const { asset } = await this.loadAssetForUser(
+      userId,
+      assetId,
+      HouseholdRole.MANAGER,
+    );
     const updated = await this.prisma.asset.update({
       where: { id: asset.id },
       data: {
@@ -159,16 +181,20 @@ export class AssetsService {
     await this.prisma.writeAudit({
       householdId: asset.householdId,
       actorUserId: userId,
-      action: "ASSET_UPDATED",
-      entityType: "asset",
+      action: 'ASSET_UPDATED',
+      entityType: 'asset',
       entityId: asset.id,
-      metadata: body as Prisma.InputJsonValue,
+      metadata: body,
     });
     return { asset: updated };
   }
 
   async remove(userId: string, assetId: string) {
-    const { asset } = await this.loadAssetForUser(userId, assetId, HouseholdRole.MANAGER);
+    const { asset } = await this.loadAssetForUser(
+      userId,
+      assetId,
+      HouseholdRole.MANAGER,
+    );
     await this.prisma.asset.update({
       where: { id: asset.id },
       data: { deletedAt: new Date(), status: AssetStatus.DISPOSED },
@@ -177,8 +203,8 @@ export class AssetsService {
     await this.prisma.writeAudit({
       householdId: asset.householdId,
       actorUserId: userId,
-      action: "ASSET_DELETED",
-      entityType: "asset",
+      action: 'ASSET_DELETED',
+      entityType: 'asset',
       entityId: asset.id,
     });
     return { deleted: true };

@@ -11,7 +11,7 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   webServer: {
-    command: "npm run start -- -p 3005",
+    command: "yarn workspace @homestead/web start",
     url: "http://127.0.0.1:3005",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

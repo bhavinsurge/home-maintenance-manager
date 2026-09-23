@@ -4,19 +4,19 @@ import {
   Injectable,
   NestInterceptor,
   StreamableFile,
-} from "@nestjs/common";
-import { Observable, map } from "rxjs";
+} from '@nestjs/common';
+import { Observable, map } from 'rxjs';
 
-export const SKIP_ENVELOPE = Symbol("SKIP_ENVELOPE");
+export const SKIP_ENVELOPE = Symbol('SKIP_ENVELOPE');
 
 @Injectable()
 export class ResponseEnvelopeInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
-      map((data) => {
+      map((data: unknown) => {
         if (data instanceof StreamableFile) return data;
-        if (data && typeof data === "object" && SKIP_ENVELOPE in data) {
-          return (data as { [SKIP_ENVELOPE]: unknown })[SKIP_ENVELOPE];
+        if (data && typeof data === 'object' && SKIP_ENVELOPE in data) {
+          return data[SKIP_ENVELOPE];
         }
         return { success: true, data };
       }),
